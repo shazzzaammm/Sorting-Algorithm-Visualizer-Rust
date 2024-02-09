@@ -18,12 +18,17 @@ const BAR_WIDTH: i16 = WIDTH / ARRAY_SIZE as i16;
 struct Game {
     gl: GlGraphics,
     array: Vec<i8>,
+    index: usize,
 }
 
 impl Game {
     fn new(gl: GlGraphics) -> Game {
         let arr: Vec<i8> = (0..ARRAY_SIZE as i8).collect();
-        Game { gl, array: arr }
+        Game {
+            gl,
+            array: arr,
+            index: 0,
+        }
     }
 
     fn render(&mut self, arg: &RenderArgs) {
@@ -45,8 +50,42 @@ impl Game {
         });
     }
 
+    fn process_input(&mut self, arg: &ButtonArgs) {
+        if arg.state == ButtonState::Press {
+            match arg.button {
+                Button::Keyboard(Key::R) => self.shuffle(),
+                // Button::Keyboard(Key::Space) => self.bubble(),
+                _ => (),
+            }
+        }
+    }
+
     fn shuffle(&mut self) {
         self.array.shuffle(&mut thread_rng());
+    }
+
+    // fn single_bubble(&mut self) {
+    //     let mut new_array = self.array.clone();
+    //     for (i, n) in self.array.iter().enumerate() {
+    //         if i == self.array.len() - 1 {
+    //             break;
+    //         }
+    //         if *n > self.array[i + 1] {
+    //             new_array.swap(i, i + 1);
+    //         }
+    //     }
+    //     self.array = new_array;
+    // }
+
+    fn bubble(&mut self) {
+        self.index = (self.index + 1) % ARRAY_SIZE;
+        if self.index == self.array.len() - 1 {
+            return;
+        }
+
+        if self.array[self.index] > self.array[self.index + 1] {
+            self.array.swap(self.index, self.index + 1);
+        }
     }
 }
 
@@ -67,9 +106,10 @@ fn main() {
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
             game.render(&r);
+            game.bubble();
         }
         if let Some(b) = e.button_args() {
-            game.shuffle();
+            game.process_input(&b);
         }
     }
 }
