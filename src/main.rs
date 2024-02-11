@@ -10,9 +10,10 @@ use piston::input::*;
 use piston::window::WindowSettings;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
-const WIDTH: i16 = 500;
-const HEIGHT: i16 = 500;
-const ARRAY_SIZE: usize = 100;
+
+const HEIGHT: i16 = 600;
+const WIDTH: i16 = 600;
+const ARRAY_SIZE: usize = 75;
 const BAR_WIDTH: i16 = WIDTH / ARRAY_SIZE as i16;
 
 fn to_rgba(h: f32) -> [f32; 4] {
@@ -51,7 +52,8 @@ struct Game {
 
 impl Game {
     fn new(gl: GlGraphics) -> Game {
-        let arr: Vec<i16> = (0..ARRAY_SIZE as i16).collect();
+        let mut arr: Vec<i16> = (0..ARRAY_SIZE as i16).collect();
+        arr.shuffle(&mut thread_rng());
         Game {
             gl,
             array: arr,
@@ -66,7 +68,7 @@ impl Game {
             for (i, n) in self.array.iter().enumerate() {
                 let mut rect_color = to_rgba(map(self.array[i], 0, ARRAY_SIZE as i16, 0.0, 325.0));
                 if i == self.current_index || i == self.compared_index {
-                    rect_color = [1.0, 1.0, 1.0, 1.0];
+                    rect_color = [0.9, 0.9, 0.9, 1.0];
                 }
 
                 graphics::rectangle(
@@ -88,7 +90,6 @@ impl Game {
         if arg.state == ButtonState::Press {
             match arg.button {
                 Button::Keyboard(Key::R) => self.shuffle(),
-                // Button::Keyboard(Key::Space) => self.bubble(),
                 _ => (),
             }
         }
@@ -128,10 +129,10 @@ fn main() {
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
             game.render(&r);
-            game.bubble();
         }
         if let Some(b) = e.button_args() {
             game.process_input(&b);
         }
+        game.bubble();
     }
 }
