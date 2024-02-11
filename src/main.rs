@@ -15,19 +15,48 @@ const HEIGHT: i16 = 500;
 const ARRAY_SIZE: usize = 100;
 const BAR_WIDTH: i16 = WIDTH / ARRAY_SIZE as i16;
 
+fn to_rgba(h: f32) -> [f32; 4] {
+    let (h, s, v) = (h, 1.0, 1.0);
+    let c = v * s;
+    let x = c * (1.0 - ((h / 60.0) % 2.0 - 1.0).abs());
+    let m = v - c;
+
+    let (r, g, b) = if h >= 0.0 && h < 60.0 {
+        (c, x, 0.0)
+    } else if h >= 60.0 && h < 120.0 {
+        (x, c, 0.0)
+    } else if h >= 120.0 && h < 180.0 {
+        (0.0, c, x)
+    } else if h >= 180.0 && h < 240.0 {
+        (0.0, x, c)
+    } else if h >= 240.0 && h < 300.0 {
+        (x, 0.0, c)
+    } else {
+        (c, 0.0, x)
+    };
+
+    [(r + m), (g + m), (b + m), 1.0]
+}
+
+fn map(n: i16, start_1: i16, end_1: i16, start_2: f32, end_2: f32) -> f32 {
+    ((n - start_1) as f32 / (end_1 - start_1) as f32) * (end_2 - start_2) + start_2
+}
+
 struct Game {
     gl: GlGraphics,
-    array: Vec<i8>,
-    index: usize,
+    array: Vec<i16>,
+    current_index: usize,
+    compared_index: usize,
 }
 
 impl Game {
     fn new(gl: GlGraphics) -> Game {
-        let arr: Vec<i8> = (0..ARRAY_SIZE as i8).collect();
+        let arr: Vec<i16> = (0..ARRAY_SIZE as i16).collect();
         Game {
             gl,
             array: arr,
-            index: 0,
+            current_index: 0,
+            compared_index: 0,
         }
     }
 
@@ -35,8 +64,13 @@ impl Game {
         self.gl.draw(arg.viewport(), |_c, gl| {
             graphics::clear([0.0, 0.0, 0.0, 1.0], gl);
             for (i, n) in self.array.iter().enumerate() {
+                let mut rect_color = to_rgba(map(self.array[i], 0, ARRAY_SIZE as i16, 0.0, 325.0));
+                if i == self.current_index || i == self.compared_index {
+                    rect_color = [1.0, 1.0, 1.0, 1.0];
+                }
+
                 graphics::rectangle(
-                    [1.0, 1.0, 1.0, 1.0],
+                    rect_color,
                     [
                         (i as i16 * BAR_WIDTH) as f64,
                         0.0,
@@ -64,27 +98,14 @@ impl Game {
         self.array.shuffle(&mut thread_rng());
     }
 
-    // fn single_bubble(&mut self) {
-    //     let mut new_array = self.array.clone();
-    //     for (i, n) in self.array.iter().enumerate() {
-    //         if i == self.array.len() - 1 {
-    //             break;
-    //         }
-    //         if *n > self.array[i + 1] {
-    //             new_array.swap(i, i + 1);
-    //         }
-    //     }
-    //     self.array = new_array;
-    // }
-
     fn bubble(&mut self) {
-        self.index = (self.index + 1) % ARRAY_SIZE;
-        if self.index == self.array.len() - 1 {
+        self.current_index = (self.current_index + 1) % ARRAY_SIZE;
+        if self.current_index == self.array.len() - 1 {
             return;
         }
-
-        if self.array[self.index] > self.array[self.index + 1] {
-            self.array.swap(self.index, self.index + 1);
+        self.compared_index = self.current_index + 1;
+        if self.array[self.current_index] > self.array[self.current_index + 1] {
+            self.array.swap(self.current_index, self.current_index + 1);
         }
     }
 }
@@ -95,6 +116,7 @@ fn main() {
         .opengl(opengl)
         .exit_on_esc(true)
         .fullscreen(false)
+        .resizable(false)
         .build()
         .unwrap();
 
