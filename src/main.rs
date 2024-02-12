@@ -11,9 +11,9 @@ use piston::window::WindowSettings;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
-const HEIGHT: i16 = 600;
-const WIDTH: i16 = 600;
-const ARRAY_SIZE: usize = 75;
+const HEIGHT: i16 = 650;
+const WIDTH: i16 = 1280;
+const ARRAY_SIZE: usize = (WIDTH / 12) as usize;
 const BAR_WIDTH: i16 = WIDTH / ARRAY_SIZE as i16;
 
 fn to_rgba(h: f32) -> [f32; 4] {
@@ -43,33 +43,47 @@ fn map(n: i16, start_1: i16, end_1: i16, start_2: f32, end_2: f32) -> f32 {
     ((n - start_1) as f32 / (end_1 - start_1) as f32) * (end_2 - start_2) + start_2
 }
 
-enum SortType {
-    Bubble,
-    Cocktail,
+trait Visualizer {
+    fn new(gl: GlGraphics) -> Self;
+
+    fn render(&mut self, arg: &RenderArgs);
+
+    fn step_sort(&mut self);
+
+    fn process_input(&mut self, arg: &ButtonArgs) {
+        if arg.state == ButtonState::Press {
+            match arg.button {
+                Button::Keyboard(Key::R) => self.shuffle(),
+                _ => (),
+            }
+        }
+    }
+
+    fn shuffle(&mut self);
+
+    fn test_sorted(&mut self);
 }
 
-struct Game {
+struct BubbleVisualizer {
     gl: GlGraphics,
     array: Vec<i16>,
     current_index: usize,
     compared_index: usize,
     sorted_index: usize,
     sorted: bool,
-    direction: i32,
 }
 
-impl Game {
-    fn new(gl: GlGraphics) -> Game {
+impl Visualizer for BubbleVisualizer {
+    fn new(gl: GlGraphics) -> BubbleVisualizer {
         let mut arr: Vec<i16> = (0..ARRAY_SIZE as i16).collect();
         arr.shuffle(&mut thread_rng());
-        Game {
+        BubbleVisualizer {
             gl,
             array: arr,
             current_index: 0,
             compared_index: 0,
             sorted_index: ARRAY_SIZE,
             sorted: false,
-            direction: 1,
         }
     }
 
@@ -97,36 +111,7 @@ impl Game {
             }
         });
     }
-
-    fn step_sort(&mut self, sort_type: SortType) {
-        match sort_type {
-            SortType::Bubble => self.bubble(),
-            SortType::Cocktail => self.cocktail(),
-        }
-    }
-
-    fn process_input(&mut self, arg: &ButtonArgs) {
-        if arg.state == ButtonState::Press {
-            match arg.button {
-                Button::Keyboard(Key::R) => self.shuffle(),
-                _ => (),
-            }
-        }
-    }
-
-    fn shuffle(&mut self) {
-        self.sorted_index = ARRAY_SIZE;
-        self.array.shuffle(&mut thread_rng());
-    }
-
-    fn test_sorted(&mut self) {
-        let mut sorted = self.array.clone();
-        sorted.sort();
-
-        self.sorted = self.array == sorted;
-    }
-
-    fn bubble(&mut self) {
+    fn step_sort(&mut self) {
         if self.sorted {
             return;
         }
@@ -144,24 +129,23 @@ impl Game {
         }
     }
 
-    fn cocktail(&mut self) {
-        if self.sorted {
-            return;
-        }
-        self.current_index = (self.current_index as i32 + self.direction) as usize;
+    fn shuffle(&mut self) {
+        self.sorted_index = ARRAY_SIZE;
+        self.array.shuffle(&mut thread_rng());
+    }
 
-        if self.current_index == self.array.len() - 1 || self.current_index == 0 {
-            self.direction *= -1;
-        }
-        self.compared_index = (self.current_index as i32 + self.direction) as usize;
-        if self.direction > 0 {
-            if self.array[self.current_index] > self.array[self.current_index + 1] {
-                self.array.swap(self.current_index, self.current_index + 1);
-            }
-        }
-        if self.direction < 0 {
-            if self.array[self.current_index] < self.array[self.current_index - 1] {
-                self.array.swap(self.current_index, self.current_index - 1);
+    fn test_sorted(&mut self) {
+        let mut sorted = self.array.clone();
+        sorted.sort();
+
+        self.sorted = self.array == sorted;
+    }
+
+    fn process_input(&mut self, arg: &ButtonArgs) {
+        if arg.state == ButtonState::Press {
+            match arg.button {
+                Button::Keyboard(Key::R) => self.shuffle(),
+                _ => (),
             }
         }
     }
@@ -176,7 +160,7 @@ fn main() {
         .build()
         .unwrap();
 
-    let mut game = Game::new(GlGraphics::new(opengl));
+    let mut game = BubbleVisualizer::new(GlGraphics::new(opengl));
 
     let e_settings = EventSettings::new();
 
@@ -190,7 +174,7 @@ fn main() {
             game.process_input(&b);
         }
         if event_cycles % 1 == 0 {
-            game.step_sort(SortType::Cocktail);
+            game.step_sort();
         }
         event_cycles += 1;
     }
