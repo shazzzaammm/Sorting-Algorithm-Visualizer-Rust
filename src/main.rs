@@ -73,6 +73,17 @@ struct BubbleVisualizer {
     sorted: bool,
 }
 
+struct CocktailVisualizer {
+    gl: GlGraphics,
+    array: Vec<i16>,
+    current_index: usize,
+    compared_index: usize,
+    sorted_max: usize,
+    sorted_min: usize,
+    direction: i32,
+    sorted: bool,
+}
+
 impl Visualizer for BubbleVisualizer {
     fn new(gl: GlGraphics) -> BubbleVisualizer {
         let mut arr: Vec<i16> = (0..ARRAY_SIZE as i16).collect();
@@ -151,6 +162,90 @@ impl Visualizer for BubbleVisualizer {
     }
 }
 
+impl Visualizer for CocktailVisualizer {
+    fn new(gl: GlGraphics) -> CocktailVisualizer {
+        let mut arr: Vec<i16> = (0..ARRAY_SIZE as i16).collect();
+        arr.shuffle(&mut thread_rng());
+        CocktailVisualizer {
+            gl,
+            array: arr,
+            current_index: 0,
+            compared_index: 0,
+            sorted_max: ARRAY_SIZE,
+            sorted_min: 0,
+            direction: 1,
+            sorted: false,
+        }
+    }
+
+    fn render(&mut self, arg: &RenderArgs) {
+        self.test_sorted();
+        self.gl.draw(arg.viewport(), |_c, gl| {
+            graphics::clear([0.0, 0.0, 0.0, 1.0], gl);
+            for (i, n) in self.array.iter().enumerate() {
+                let hue = map(self.array[i], 0, ARRAY_SIZE as i16, 0.0, 360.0);
+                let mut rect_color = to_rgba(hue);
+                if !self.sorted && (i == self.current_index || i == self.compared_index) {
+                    rect_color = [0.9, 0.9, 0.9, 1.0];
+                }
+                graphics::rectangle(
+                    rect_color,
+                    [
+                        (i as i16 * BAR_WIDTH) as f64,
+                        0.0,
+                        BAR_WIDTH as f64,
+                        *n as f64 * (HEIGHT as f64 / ARRAY_SIZE as f64),
+                    ],
+                    _c.transform,
+                    gl,
+                );
+            }
+        });
+    }
+
+    fn step_sort(&mut self) {
+        if self.sorted {
+            return;
+        }
+
+        self.current_index = (self.current_index as i32 + self.direction) as usize;
+        if self.current_index == self.array.len() - 1 || self.current_index == 0 {
+            self.direction *= -1;
+        }
+
+        if self.sorted_max <= self.current_index {
+            self.sorted_min -= 1;
+        } else if self.sorted_min >= self.current_index {
+            self.sorted_max += 1;
+        }
+
+        self.compared_index = (self.current_index as i32 + self.direction) as usize;
+
+        if self.direction > 0 {
+            if self.array[self.current_index] > self.array[self.current_index + 1] {
+                self.array.swap(self.current_index, self.current_index + 1);
+            }
+        } else {
+            if self.array[self.current_index] < self.array[self.current_index - 1] {
+                self.array.swap(self.current_index, self.current_index - 1);
+            }
+        }
+    }
+
+    fn shuffle(&mut self) {
+        self.sorted_max = ARRAY_SIZE;
+        self.sorted_min = 0;
+        self.array.shuffle(&mut thread_rng());
+    }
+
+    fn test_sorted(&mut self) {
+        let mut sorted = self.array.clone();
+        sorted.sort();
+
+        self.sorted = self.array == sorted;
+    }
+}
+
 fn main() {
     let opengl = OpenGL::V3_2;
     let mut window: Window = WindowSettings::new("Sort?", [WIDTH as u32, HEIGHT as u32])
@@ -160,7 +255,7 @@ fn main() {
         .build()
         .unwrap();
 
-    let mut game = BubbleVisualizer::new(GlGraphics::new(opengl));
+    let mut visualizer = CocktailVisualizer::new(GlGraphics::new(opengl));
 
     let e_settings = EventSettings::new();
 
@@ -168,13 +263,13 @@ fn main() {
     let mut event_cycles = 0;
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
-            game.render(&r);
+            visualizer.render(&r);
         }
         if let Some(b) = e.button_args() {
-            game.process_input(&b);
+            visualizer.process_input(&b);
         }
         if event_cycles % 1 == 0 {
-            game.step_sort();
+            visualizer.step_sort();
         }
         event_cycles += 1;
     }
