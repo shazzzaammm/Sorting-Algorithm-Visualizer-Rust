@@ -117,7 +117,7 @@ impl Game {
             return;
         }
         self.current_index = self.current_index + 1;
-        if self.sorted_index <= self.current_index{
+        if self.sorted_index <= self.current_index {
             self.current_index = 0;
             self.sorted_index -= 1;
         }
@@ -134,7 +134,6 @@ impl Game {
 fn main() {
     let opengl = OpenGL::V3_2;
     let mut window: Window = WindowSettings::new("Sort?", [WIDTH as u32, HEIGHT as u32])
-        .opengl(opengl)
         .exit_on_esc(true)
         .fullscreen(false)
         .resizable(false)
