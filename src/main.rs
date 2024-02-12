@@ -48,6 +48,8 @@ struct Game {
     array: Vec<i16>,
     current_index: usize,
     compared_index: usize,
+    sorted_index: usize,
+    sorted: bool,
 }
 
 impl Game {
@@ -59,15 +61,18 @@ impl Game {
             array: arr,
             current_index: 0,
             compared_index: 0,
+            sorted_index: ARRAY_SIZE,
+            sorted: false,
         }
     }
 
     fn render(&mut self, arg: &RenderArgs) {
+        self.test_sorted();
         self.gl.draw(arg.viewport(), |_c, gl| {
             graphics::clear([0.0, 0.0, 0.0, 1.0], gl);
             for (i, n) in self.array.iter().enumerate() {
                 let mut rect_color = to_rgba(map(self.array[i], 0, ARRAY_SIZE as i16, 0.0, 325.0));
-                if i == self.current_index || i == self.compared_index {
+                if !self.sorted && (i == self.current_index || i == self.compared_index) {
                     rect_color = [0.9, 0.9, 0.9, 1.0];
                 }
 
@@ -96,11 +101,26 @@ impl Game {
     }
 
     fn shuffle(&mut self) {
+        self.sorted_index = ARRAY_SIZE;
         self.array.shuffle(&mut thread_rng());
     }
 
+    fn test_sorted(&mut self) {
+        let mut sorted = self.array.clone();
+        sorted.sort();
+
+        self.sorted = self.array == sorted;
+    }
+
     fn bubble(&mut self) {
-        self.current_index = (self.current_index + 1) % ARRAY_SIZE;
+        if self.sorted {
+            return;
+        }
+        self.current_index = self.current_index + 1;
+        if self.sorted_index <= self.current_index{
+            self.current_index = 0;
+            self.sorted_index -= 1;
+        }
         if self.current_index == self.array.len() - 1 {
             return;
         }
