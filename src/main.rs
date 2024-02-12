@@ -43,6 +43,11 @@ fn map(n: i16, start_1: i16, end_1: i16, start_2: f32, end_2: f32) -> f32 {
     ((n - start_1) as f32 / (end_1 - start_1) as f32) * (end_2 - start_2) + start_2
 }
 
+enum SortType {
+    Bubble,
+    Cocktail,
+}
+
 struct Game {
     gl: GlGraphics,
     array: Vec<i16>,
@@ -50,6 +55,7 @@ struct Game {
     compared_index: usize,
     sorted_index: usize,
     sorted: bool,
+    direction: i32,
 }
 
 impl Game {
@@ -63,6 +69,7 @@ impl Game {
             compared_index: 0,
             sorted_index: ARRAY_SIZE,
             sorted: false,
+            direction: 1,
         }
     }
 
@@ -71,11 +78,11 @@ impl Game {
         self.gl.draw(arg.viewport(), |_c, gl| {
             graphics::clear([0.0, 0.0, 0.0, 1.0], gl);
             for (i, n) in self.array.iter().enumerate() {
-                let mut rect_color = to_rgba(map(self.array[i], 0, ARRAY_SIZE as i16, 0.0, 325.0));
+                let hue = map(self.array[i], 0, ARRAY_SIZE as i16, 0.0, 360.0);
+                let mut rect_color = to_rgba(hue);
                 if !self.sorted && (i == self.current_index || i == self.compared_index) {
                     rect_color = [0.9, 0.9, 0.9, 1.0];
                 }
-
                 graphics::rectangle(
                     rect_color,
                     [
@@ -89,6 +96,13 @@ impl Game {
                 );
             }
         });
+    }
+
+    fn step_sort(&mut self, sort_type: SortType) {
+        match sort_type {
+            SortType::Bubble => self.bubble(),
+            SortType::Cocktail => self.cocktail(),
+        }
     }
 
     fn process_input(&mut self, arg: &ButtonArgs) {
@@ -129,6 +143,28 @@ impl Game {
             self.array.swap(self.current_index, self.current_index + 1);
         }
     }
+
+    fn cocktail(&mut self) {
+        if self.sorted {
+            return;
+        }
+        self.current_index = (self.current_index as i32 + self.direction) as usize;
+
+        if self.current_index == self.array.len() - 1 || self.current_index == 0 {
+            self.direction *= -1;
+        }
+        self.compared_index = (self.current_index as i32 + self.direction) as usize;
+        if self.direction > 0 {
+            if self.array[self.current_index] > self.array[self.current_index + 1] {
+                self.array.swap(self.current_index, self.current_index + 1);
+            }
+        }
+        if self.direction < 0 {
+            if self.array[self.current_index] < self.array[self.current_index - 1] {
+                self.array.swap(self.current_index, self.current_index - 1);
+            }
+        }
+    }
 }
 
 fn main() {
@@ -145,6 +181,7 @@ fn main() {
     let e_settings = EventSettings::new();
 
     let mut events = Events::new(e_settings);
+    let mut event_cycles = 0;
     while let Some(e) = events.next(&mut window) {
         if let Some(r) = e.render_args() {
             game.render(&r);
@@ -152,6 +189,9 @@ fn main() {
         if let Some(b) = e.button_args() {
             game.process_input(&b);
         }
-        game.bubble();
+        if event_cycles % 1 == 0 {
+            game.step_sort(SortType::Cocktail);
+        }
+        event_cycles += 1;
     }
 }
