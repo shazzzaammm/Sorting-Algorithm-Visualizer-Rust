@@ -84,6 +84,98 @@ struct CocktailVisualizer {
     sorted: bool,
 }
 
+struct QuickVisualizer {
+    array: Vec<i16>,
+    stack: Vec<(usize, usize)>,
+    gl: GlGraphics,
+    sorted: bool,
+}
+
+impl Visualizer for QuickVisualizer {
+    fn render(&mut self, arg: &RenderArgs) {
+        self.test_sorted();
+        self.gl.draw(arg.viewport(), |_c, gl| {
+            graphics::clear([0.0, 0.0, 0.0, 1.0], gl);
+            for (i, n) in self.array.iter().enumerate() {
+                let hue = map(self.array[i], 0, ARRAY_SIZE as i16, 0.0, 360.0);
+                let mut rect_color = to_rgba(hue);
+                if let Some(j) = self.stack.last() {
+                    if j.0 == i || j.1 == i {
+                        rect_color = [1.0, 1.0, 1.0, 1.0];
+                    }
+                }
+                graphics::rectangle(
+                    rect_color,
+                    [
+                        (i as i16 * BAR_WIDTH) as f64,
+                        0.0,
+                        BAR_WIDTH as f64,
+                        *n as f64 * (HEIGHT as f64 / ARRAY_SIZE as f64),
+                    ],
+                    _c.transform,
+                    gl,
+                );
+            }
+        });
+    }
+
+    fn new(g_graphics: GlGraphics) -> Self {
+        let mut stack: Vec<(usize, usize)> = Vec::new();
+        let mut arr: Vec<i16> = (0..ARRAY_SIZE as i16).collect();
+        arr.shuffle(&mut thread_rng());
+        let low = 0;
+        let high = arr.len() - 1;
+        stack.push((low, high));
+        QuickVisualizer {
+            array: arr,
+            stack,
+            gl: g_graphics,
+            sorted: false,
+        }
+    }
+
+    fn step_sort(&mut self) {
+        if self.sorted {
+            return;
+        }
+        if let Some((low, high)) = self.stack.pop() {
+            if let Some(pi) = self.partition_step(low, high) {
+                if pi > 0 {
+                    self.stack.push((low, pi - 1));
+                }
+                self.stack.push((pi + 1, high));
+            }
+        }
+    }
+    fn test_sorted(&mut self) {
+        let mut sorted = self.array.clone();
+        sorted.sort();
+
+        self.sorted = self.array == sorted;
+    }
+    fn shuffle(&mut self) {
+        self.array.shuffle(&mut thread_rng());
+    }
+}
+
+impl QuickVisualizer {
+    fn partition_step(&mut self, low: usize, high: usize) -> Option<usize> {
+        if low >= high {
+            return None;
+        }
+
+        let pivot = self.array[high];
+        let mut i = low;
+        for j in low..high {
+            if self.array[j] < pivot {
+                self.array.swap(i, j);
+                i += 1;
+            }
+        }
+        self.array.swap(i, high);
+        Some(i)
+    }
+}
 impl Visualizer for BubbleVisualizer {
     fn new(gl: GlGraphics) -> BubbleVisualizer {
         let mut arr: Vec<i16> = (0..ARRAY_SIZE as i16).collect();
@@ -255,7 +347,8 @@ fn main() {
         .build()
         .unwrap();
 
-    let mut visualizer = CocktailVisualizer::new(GlGraphics::new(opengl));
+    let mut visualizer = QuickVisualizer::new(GlGraphics::new(opengl));
+    // let mut visualizer = BubbleVisualizer::new(GlGraphics::new(opengl));
 
     let e_settings = EventSettings::new();
 
@@ -265,11 +358,11 @@ fn main() {
         if let Some(r) = e.render_args() {
             visualizer.render(&r);
         }
-        if let Some(b) = e.button_args() {
-            visualizer.process_input(&b);
-        }
-        if event_cycles % 1 == 0 {
-            visualizer.step_sort();
+        // if let Some(b) = e.button_args() {
+        //     visualizer.process_input(&b);
+        // }
+        if event_cycles % 25 == 0 {
+            visualizer.step_sort()
         }
         event_cycles += 1;
     }
