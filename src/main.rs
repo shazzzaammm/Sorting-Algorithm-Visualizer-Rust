@@ -152,6 +152,11 @@ impl Visualizer for QuickVisualizer {
         }
     }
     fn shuffle(&mut self) {
+        self.sorted = false;
+        self.stack = Vec::new();
+        let low = 0;
+        let high = self.array.len() - 1;
+        self.stack.push((low, high));
         self.array.shuffle(&mut thread_rng());
     }
     fn test_sorted(&mut self) {
