@@ -92,6 +92,21 @@ struct QuickVisualizer {
 }
 
 impl Visualizer for QuickVisualizer {
+    fn new(g_graphics: GlGraphics) -> Self {
+        let mut stack: Vec<(usize, usize)> = Vec::new();
+        let mut arr: Vec<i16> = (0..ARRAY_SIZE as i16).collect();
+        arr.shuffle(&mut thread_rng());
+        let low = 0;
+        let high = arr.len() - 1;
+        stack.push((low, high));
+        QuickVisualizer {
+            array: arr,
+            stack,
+            gl: g_graphics,
+            sorted: false,
+        }
+    }
+
     fn render(&mut self, arg: &RenderArgs) {
         self.test_sorted();
         self.gl.draw(arg.viewport(), |_c, gl| {
@@ -119,21 +134,6 @@ impl Visualizer for QuickVisualizer {
         });
     }
 
-    fn new(g_graphics: GlGraphics) -> Self {
-        let mut stack: Vec<(usize, usize)> = Vec::new();
-        let mut arr: Vec<i16> = (0..ARRAY_SIZE as i16).collect();
-        arr.shuffle(&mut thread_rng());
-        let low = 0;
-        let high = arr.len() - 1;
-        stack.push((low, high));
-        QuickVisualizer {
-            array: arr,
-            stack,
-            gl: g_graphics,
-            sorted: false,
-        }
-    }
-
     fn step_sort(&mut self) {
         if self.sorted {
             return;
@@ -147,14 +147,14 @@ impl Visualizer for QuickVisualizer {
             }
         }
     }
+    fn shuffle(&mut self) {
+        self.array.shuffle(&mut thread_rng());
+    }
     fn test_sorted(&mut self) {
         let mut sorted = self.array.clone();
         sorted.sort();
 
         self.sorted = self.array == sorted;
-    }
-    fn shuffle(&mut self) {
-        self.array.shuffle(&mut thread_rng());
     }
 }
 
@@ -176,6 +176,7 @@ impl QuickVisualizer {
         Some(i)
     }
 }
+
 impl Visualizer for BubbleVisualizer {
     fn new(gl: GlGraphics) -> BubbleVisualizer {
         let mut arr: Vec<i16> = (0..ARRAY_SIZE as i16).collect();
