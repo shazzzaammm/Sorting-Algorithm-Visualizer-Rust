@@ -66,6 +66,7 @@ trait Visualizer {
 
 struct BubbleVisualizer {
     gl: GlGraphics,
+    speed: u32,
     array: Vec<i16>,
     current_index: usize,
     compared_index: usize,
@@ -75,6 +76,7 @@ struct BubbleVisualizer {
 
 struct CocktailVisualizer {
     gl: GlGraphics,
+    speed: u32,
     array: Vec<i16>,
     current_index: usize,
     compared_index: usize,
@@ -86,6 +88,7 @@ struct CocktailVisualizer {
 
 struct QuickVisualizer {
     array: Vec<i16>,
+    speed: u32,
     stack: Vec<(usize, usize)>,
     gl: GlGraphics,
     sorted: bool,
@@ -104,6 +107,7 @@ impl Visualizer for QuickVisualizer {
             stack,
             gl: g_graphics,
             sorted: false,
+            speed: 25,
         }
     }
 
@@ -188,6 +192,7 @@ impl Visualizer for BubbleVisualizer {
             compared_index: 0,
             sorted_index: ARRAY_SIZE,
             sorted: false,
+            speed: 1,
         }
     }
 
@@ -268,6 +273,7 @@ impl Visualizer for CocktailVisualizer {
             sorted_min: 0,
             direction: 1,
             sorted: false,
+            speed: 1,
         }
     }
 
@@ -359,11 +365,11 @@ fn main() {
         if let Some(r) = e.render_args() {
             visualizer.render(&r);
         }
-        // if let Some(b) = e.button_args() {
-        //     visualizer.process_input(&b);
-        // }
-        if event_cycles % 25 == 0 {
-            visualizer.step_sort()
+        if let Some(b) = e.button_args() {
+            visualizer.process_input(&b);
+        }
+        if event_cycles % visualizer.speed == 0 {
+            visualizer.step_sort();
         }
         event_cycles += 1;
     }
