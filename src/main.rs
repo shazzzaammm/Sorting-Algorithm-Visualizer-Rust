@@ -93,6 +93,13 @@ struct QuickVisualizer {
     gl: GlGraphics,
     sorted: bool,
 }
+#[allow(dead_code)]
+struct BogoVisualizer {
+    array: Vec<i16>,
+    speed: u32,
+    gl: GlGraphics,
+    sorted: bool,
+}
 
 impl Visualizer for QuickVisualizer {
     fn new(g_graphics: GlGraphics) -> Self {
@@ -350,6 +357,65 @@ impl Visualizer for CocktailVisualizer {
     }
 }
 
+impl Visualizer for BogoVisualizer {
+    fn new(gl: GlGraphics) -> Self {
+        let mut arr: Vec<i16> = (0..ARRAY_SIZE as i16).collect();
+        arr.shuffle(&mut thread_rng());
+        BogoVisualizer {
+            array: arr,
+            speed: 1,
+            gl: gl,
+            sorted: false,
+        }
+    }
+
+    fn shuffle(&mut self) {
+        self.array.shuffle(&mut thread_rng());
+    }
+
+    fn step_sort(&mut self) {
+        self.test_sorted();
+        if !self.sorted {
+            self.shuffle();
+        }
+    }
+
+    fn test_sorted(&mut self) {
+        let mut sorted = self.array.clone();
+        sorted.sort();
+
+        self.sorted = self.array == sorted;
+    }
+
+    fn render(&mut self, arg: &RenderArgs) {
+        self.gl.draw(arg.viewport(), |_c, gl| {
+            graphics::clear([0.0, 0.0, 0.0, 1.0], gl);
+            for (i, n) in self.array.iter().enumerate() {
+                let hue = map(self.array[i], 0, ARRAY_SIZE as i16, 0.0, 360.0);
+                graphics::rectangle(
+                    to_rgba(hue),
+                    [
+                        (i as i16 * BAR_WIDTH) as f64,
+                        0.0,
+                        BAR_WIDTH as f64,
+                        *n as f64 * (HEIGHT as f64 / ARRAY_SIZE as f64),
+                    ],
+                    _c.transform,
+                    gl,
+                );
+            }
+        });
+    }
+
+    fn process_input(&mut self, arg: &ButtonArgs) {
+        if arg.state == ButtonState::Press {
+            match arg.button {
+                Button::Keyboard(Key::R) => self.shuffle(),
+                _ => (),
+            }
+        }
+    }
+}
 fn main() {
     let opengl = OpenGL::V3_2;
     let mut window: Window = WindowSettings::new("Sort?", [WIDTH as u32, HEIGHT as u32])
@@ -359,8 +425,10 @@ fn main() {
         .build()
         .unwrap();
 
-    let mut visualizer = QuickVisualizer::new(GlGraphics::new(opengl));
     // let mut visualizer = BubbleVisualizer::new(GlGraphics::new(opengl));
+    // let mut visualizer = CocktailVisualizer::new(GlGraphics::new(opengl));
+    // let mut visualizer = QuickVisualizer::new(GlGraphics::new(opengl));
+    let mut visualizer = BogoVisualizer::new(GlGraphics::new(opengl));
 
     let e_settings = EventSettings::new();
 
