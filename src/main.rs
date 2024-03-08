@@ -11,9 +11,9 @@ use piston::window::WindowSettings;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
 
-const HEIGHT: i16 = 650;
 const WIDTH: i16 = 1280;
-const ARRAY_SIZE: usize = (WIDTH / 12) as usize;
+const HEIGHT: i16 = 620;
+const ARRAY_SIZE: usize = (WIDTH / 1) as usize;
 const BAR_WIDTH: i16 = WIDTH / ARRAY_SIZE as i16;
 
 fn to_rgba(h: f32) -> [f32; 4] {
@@ -114,7 +114,7 @@ impl Visualizer for QuickVisualizer {
             stack,
             gl: g_graphics,
             sorted: false,
-            speed: 25,
+            speed: 1,
         }
     }
 
@@ -232,6 +232,7 @@ impl Visualizer for BubbleVisualizer {
             }
         });
     }
+
     fn step_sort(&mut self) {
         if self.sorted {
             return;
@@ -420,8 +421,6 @@ fn main() {
     let opengl = OpenGL::V3_2;
     let mut window: Window = WindowSettings::new("Sort?", [WIDTH as u32, HEIGHT as u32])
         .exit_on_esc(true)
-        .fullscreen(false)
-        .resizable(false)
         .build()
         .unwrap();
 
