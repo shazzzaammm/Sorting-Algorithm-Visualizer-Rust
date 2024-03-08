@@ -64,6 +64,7 @@ trait Visualizer {
     fn test_sorted(&mut self);
 }
 
+#[allow(dead_code)]
 struct BubbleVisualizer {
     gl: GlGraphics,
     speed: u32,
@@ -74,6 +75,7 @@ struct BubbleVisualizer {
     sorted: bool,
 }
 
+#[allow(dead_code)]
 struct CocktailVisualizer {
     gl: GlGraphics,
     speed: u32,
@@ -86,6 +88,7 @@ struct CocktailVisualizer {
     sorted: bool,
 }
 
+#[allow(dead_code)]
 struct QuickVisualizer {
     array: Vec<i16>,
     speed: u32,
@@ -93,6 +96,7 @@ struct QuickVisualizer {
     gl: GlGraphics,
     sorted: bool,
 }
+
 #[allow(dead_code)]
 struct BogoVisualizer {
     array: Vec<i16>,
